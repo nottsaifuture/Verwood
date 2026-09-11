@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>The Verwood — Plot 269 · Interactive 3D Home</title>
+  <meta name="description" content="Interactive 3D presentation and first-person walkthrough of The Verwood, Plot 269, Ashby Fields, Ashby-de-la-Zouch (Bloor Homes)." />
+  <link rel="icon" href="./icons/favicon.svg" type="image/svg+xml" />
+  <script type="module" crossorigin src="./assets/index-DplYuhLf.js"></script>
+  <link rel="modulepreload" crossorigin href="./assets/three-r1wVmGEJ.js">
+  <link rel="stylesheet" crossorigin href="./assets/index-B2fll0Gw.css">
+</head>
+<body>
+  <div id="app" data-mode="presentation" data-quality="medium">
+
+    <!-- 3D viewport: WebGL canvas plus CSS2D label overlay are injected here -->
+    <div id="viewport" aria-label="3D house viewer"></div>
+
+    <!-- Loading screen -->
+    <div id="loader" role="status" aria-live="polite">
+      <div class="loader-inner">
+        <p class="loader-kicker">Bloor Homes · Ashby Fields</p>
+        <h1 class="loader-title">VERWOOD</h1>
+        <p class="loader-sub">Plot 269<br />Interactive 3D Home</p>
+        <div class="loader-bar" aria-hidden="true"><span id="loader-progress"></span></div>
+        <p class="loader-status" id="loader-status">Loading 3D experience…</p>
+      </div>
+    </div>
+
+    <!-- Brand / title -->
+    <header class="brand" id="brand">
+      <p class="brand-kicker">Bloor Homes · Ashby Fields</p>
+      <h1 class="brand-title">The Verwood</h1>
+      <p class="brand-sub">Plot 269 · Ashby-de-la-Zouch</p>
+    </header>
+
+    <!-- Top-right utility buttons -->
+    <div class="topbar" id="topbar">
+      <label class="quality">
+        <span class="sr-only">Render quality</span>
+        <select id="quality-select" aria-label="Render quality">
+          <option value="low">Quality: Low</option>
+          <option value="medium" selected>Quality: Medium</option>
+          <option value="high">Quality: High</option>
+        </select>
+      </label>
+      <button type="button" class="btn icon-btn" id="btn-info" aria-label="Source information and disclaimer" title="Information">i</button>
+      <button type="button" class="btn icon-btn" id="btn-help" aria-label="Help and controls" title="Help">?</button>
+      <button type="button" class="btn icon-btn" id="btn-panel-toggle" aria-label="Toggle control panel" aria-expanded="true" title="Menu">≡</button>
+    </div>
+
+    <!-- Left navigation panel (bottom sheet on mobile) -->
+    <aside id="panel" class="panel" aria-label="Viewer controls">
+      <div class="panel-scroll">
+
+        <section class="panel-section">
+          <h2 class="panel-heading">View</h2>
+          <div class="btn-grid" id="view-buttons">
+            <button type="button" class="btn" data-view="exterior">Exterior</button>
+            <button type="button" class="btn" data-view="isometric">Isometric</button>
+            <button type="button" class="btn" data-view="ground">Ground Floor</button>
+            <button type="button" class="btn" data-view="first">First Floor</button>
+          </div>
+          <div class="seg" id="floor-buttons" role="group" aria-label="Floor visibility">
+            <button type="button" class="seg-btn is-active" data-floor="full">Full House</button>
+            <button type="button" class="seg-btn" data-floor="ground">Ground</button>
+            <button type="button" class="seg-btn" data-floor="first">First</button>
+          </div>
+        </section>
+
+        <section class="panel-section">
+          <h2 class="panel-heading">Rooms</h2>
+          <div class="room-list" id="room-list"></div>
+        </section>
+
+        <section class="panel-section">
+          <h2 class="panel-heading">Tools</h2>
+          <div class="btn-grid">
+            <button type="button" class="btn tool-btn" id="btn-dimensions" aria-expanded="false" aria-controls="popover-dimensions">Dimensions</button>
+            <button type="button" class="btn tool-btn" id="btn-cutaway" aria-expanded="false" aria-controls="popover-cutaway">Cutaway</button>
+            <button type="button" class="btn tool-btn" id="btn-exploded" aria-pressed="false">Exploded View</button>
+            <button type="button" class="btn" id="btn-reset">Reset Camera</button>
+          </div>
+          <div class="slider-row" id="exploded-row" hidden>
+            <label for="exploded-range">Separation</label>
+            <input type="range" id="exploded-range" min="0" max="3" step="0.05" value="1.5" />
+            <output id="exploded-value" for="exploded-range">1.5 m</output>
+          </div>
+        </section>
+
+        <section class="panel-section">
+          <h2 class="panel-heading">Mode</h2>
+          <div class="seg" role="group" aria-label="Viewer mode">
+            <button type="button" class="seg-btn is-active" id="mode-presentation" data-mode="presentation">Presentation</button>
+            <button type="button" class="seg-btn" id="mode-walkthrough" data-mode="walkthrough">Walkthrough</button>
+          </div>
+          <div class="field-row">
+            <label for="spawn-select">Start at</label>
+            <select id="spawn-select" aria-label="Walkthrough start point"></select>
+          </div>
+          <button type="button" class="btn btn-primary" id="btn-enter-walkthrough">Enter Walkthrough</button>
+        </section>
+
+      </div>
+    </aside>
+
+    <!-- Dimensions popover -->
+    <div class="popover" id="popover-dimensions" hidden>
+      <div class="popover-head">
+        <h3>Dimensions</h3>
+        <button type="button" class="btn icon-btn small" data-close="popover-dimensions" aria-label="Close dimensions">×</button>
+      </div>
+      <div class="seg units" role="group" aria-label="Units">
+        <button type="button" class="seg-btn is-active" data-unit="m">Meters</button>
+        <button type="button" class="seg-btn" data-unit="ft">Feet</button>
+      </div>
+      <label class="check"><input type="checkbox" id="dim-rooms" /> Room dimensions</label>
+      <label class="check"><input type="checkbox" id="dim-exterior" /> Exterior dimensions <span class="muted">(approx.)</span></label>
+      <label class="check"><input type="checkbox" id="dim-doors" /> Door widths</label>
+      <label class="check"><input type="checkbox" id="dim-windows" /> Window widths</label>
+      <label class="check"><input type="checkbox" id="dim-ceiling" /> Ceiling height</label>
+      <label class="check check-strong"><input type="checkbox" id="dim-custom" /> Custom measurement</label>
+      <div class="sub" id="measure-options">
+        <p class="hint" id="measure-hint">Click two surfaces to measure. Esc cancels.</p>
+        <label class="check"><input type="checkbox" id="snap-corners" checked /> Snap to corners</label>
+        <label class="check"><input type="checkbox" id="snap-edges" checked /> Snap to wall edges</label>
+        <label class="check"><input type="checkbox" id="snap-floor" /> Snap to floor</label>
+        <ul class="measure-list" id="measure-list" aria-label="Measurements"></ul>
+        <button type="button" class="btn small" id="btn-clear-measurements">Clear measurements</button>
+      </div>
+    </div>
+
+    <!-- Cutaway popover -->
+    <div class="popover" id="popover-cutaway" hidden>
+      <div class="popover-head">
+        <h3>Cutaway</h3>
+        <button type="button" class="btn icon-btn small" data-close="popover-cutaway" aria-label="Close cutaway">×</button>
+      </div>
+      <div class="btn-grid two" id="cutaway-buttons">
+        <button type="button" class="btn is-active" data-cutaway="none">None</button>
+        <button type="button" class="btn" data-cutaway="roof">Roof Off</button>
+        <button type="button" class="btn" data-cutaway="front">Front Cut</button>
+        <button type="button" class="btn" data-cutaway="rear">Rear Cut</button>
+        <button type="button" class="btn" data-cutaway="left">Left Cut</button>
+        <button type="button" class="btn" data-cutaway="right">Right Cut</button>
+        <button type="button" class="btn" data-cutaway="ground">Ground Floor</button>
+        <button type="button" class="btn" data-cutaway="first">First Floor</button>
+      </div>
+      <div class="slider-row" id="cut-row" hidden>
+        <label for="cut-range">Cut position</label>
+        <input type="range" id="cut-range" min="0.15" max="0.85" step="0.01" value="0.5" />
+      </div>
+    </div>
+
+    <!-- Room card -->
+    <div class="room-card" id="room-card" hidden>
+      <button type="button" class="btn icon-btn small room-card-close" id="room-card-close" aria-label="Close room details">×</button>
+      <p class="room-card-kicker" id="room-card-floor">Ground floor</p>
+      <h3 class="room-card-title" id="room-card-name">Lounge</h3>
+      <p class="room-card-dims" id="room-card-dims">3.59 m × 4.75 m</p>
+      <p class="room-card-note" id="room-card-note"></p>
+      <div class="room-card-actions">
+        <button type="button" class="btn" id="room-card-view">View Room</button>
+        <button type="button" class="btn btn-primary" id="room-card-walk">Walk Here</button>
+      </div>
+    </div>
+
+    <!-- Walkthrough HUD -->
+    <div id="hud" hidden>
+      <div class="hud-title">VERWOOD — PLOT 269</div>
+      <div class="hud-room" id="hud-room"><span class="hud-room-name" id="hud-room-name">Outside</span><span class="hud-room-dims" id="hud-room-dims"></span></div>
+      <div class="crosshair" aria-hidden="true"></div>
+      <div class="hud-prompt" id="hud-prompt" hidden></div>
+      <div class="hud-actions">
+        <button type="button" class="btn" id="hud-exit">Exit Walkthrough</button>
+        <button type="button" class="btn" id="hud-dimensions">Dimensions</button>
+        <button type="button" class="btn" id="hud-help">Help</button>
+        <select id="hud-spawn" class="hud-select" aria-label="Teleport to"></select>
+      </div>
+      <div class="hud-locknote" id="hud-locknote">Click the view to look around · Esc releases the mouse</div>
+      <div class="touch-controls" id="touch-controls">
+        <div class="joystick" id="joystick" aria-label="Move"><div class="joystick-knob"></div></div>
+        <button type="button" class="btn touch-interact" id="touch-interact" aria-label="Interact">E</button>
+      </div>
+    </div>
+
+    <!-- Help dialog -->
+    <dialog id="help-dialog" class="dialog" aria-labelledby="help-title">
+      <div class="dialog-head">
+        <h2 id="help-title">Help &amp; Controls</h2>
+        <button type="button" class="btn icon-btn small" data-close-dialog="help-dialog" aria-label="Close help">×</button>
+      </div>
+      <div class="dialog-body help-grid">
+        <section>
+          <h3>Presentation</h3>
+          <dl>
+            <dt>Drag</dt><dd>rotate</dd>
+            <dt>Scroll / pinch</dt><dd>zoom</dd>
+            <dt>Right drag / two fingers</dt><dd>pan</dd>
+            <dt>Click room</dt><dd>inspect</dd>
+            <dt>Click door</dt><dd>open / close</dd>
+          </dl>
+        </section>
+        <section>
+          <h3>Walkthrough</h3>
+          <dl>
+            <dt>W A S D</dt><dd>move</dd>
+            <dt>Mouse</dt><dd>look</dd>
+            <dt>E</dt><dd>open / close doors</dd>
+            <dt>Shift</dt><dd>walk faster</dd>
+            <dt>C</dt><dd>crouch</dd>
+            <dt>Esc</dt><dd>release mouse</dd>
+          </dl>
+        </section>
+        <section>
+          <h3>Dimensions</h3>
+          <dl>
+            <dt>Click two surfaces</dt><dd>measure</dd>
+            <dt>Esc</dt><dd>cancel measurement</dd>
+            <dt>Meters / Feet</dt><dd>switch units</dd>
+          </dl>
+        </section>
+      </div>
+    </dialog>
+
+    <!-- Info / disclaimer dialog -->
+    <dialog id="info-dialog" class="dialog" aria-labelledby="info-title">
+      <div class="dialog-head">
+        <h2 id="info-title">About this model</h2>
+        <button type="button" class="btn icon-btn small" data-close-dialog="info-dialog" aria-label="Close information">×</button>
+      </div>
+      <div class="dialog-body">
+        <p>3D representation based on published marketing floor plans for The Verwood.
+        Dimensions and layouts are approximate and should not be relied upon for
+        construction, surveying, purchasing or contractual purposes. Refer to the
+        developer's plot-specific documentation for confirmed details.</p>
+        <p class="muted">Room sizes shown are the developer's published approximate finished room sizes
+        (subject to normal building tolerances). Wall thicknesses, ceiling heights, door and window sizes,
+        staircase geometry, roof form and furniture are reasonable assumptions and are marked
+        “approx.” where displayed.</p>
+        <p class="muted">Bloor Homes · Ashby Fields · Plot 269 · The Verwood · Ashby-de-la-Zouch, Leicestershire.</p>
+      </div>
+    </dialog>
+
+  </div>
+</body>
+</html>
